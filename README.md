@@ -10,6 +10,7 @@ A personal WhatsApp AI auto-reply assistant built with Python, Django, Django RE
 - Human takeover mode per contact; when enabled, the bot stores messages but stops replying.
 - WhatsApp Cloud API webhook verification and inbound text processing.
 - AI service abstraction with a Google Gemini implementation and a safe fallback when no API key, quota, or API response is available.
+- Local `/test-chat/` page for testing Gemini replies in the browser without calling the WhatsApp API.
 - Escalation instead of auto-reply for urgent, sensitive, financial, OTP/password, or highly personal messages.
 - Duplicate WhatsApp message protection through a unique message-id constraint.
 - Environment-variable based configuration; no real secrets are committed.
@@ -53,6 +54,7 @@ config/                 Django project settings and URLs
    ```
 
 6. Open the admin dashboard at `http://127.0.0.1:8000/admin/`.
+7. Open the local test chat at `http://127.0.0.1:8000/test-chat/` to send browser messages to Gemini without using WhatsApp.
 
 ## Gemini configuration
 
@@ -65,6 +67,10 @@ GEMINI_MODEL=gemini-2.5-flash-lite
 ```
 
 `GEMINI_MODEL` defaults to `gemini-2.5-flash-lite` when it is not set. If `GEMINI_API_KEY` is missing, Gemini quota is exhausted, the API is rate-limited, or the API request fails, the assistant logs the error and sends a safe fallback reply instead of crashing the webhook.
+
+## Local test chat
+
+Open `http://127.0.0.1:8000/test-chat/` while the development server is running to test the Gemini assistant from a browser. The page stores its contact, conversation, and messages in the existing database models, applies the same Assistant Settings instructions and safety escalation rules, and does not call the WhatsApp API.
 
 ## WhatsApp webhook
 
