@@ -1,10 +1,25 @@
 from django.contrib import admin
-from .models import AssistantSettings, Contact, Conversation, Message
+from .models import AssistantSettings, Contact, Conversation, Message, ReplyExample
 
 
 @admin.register(AssistantSettings)
 class AssistantSettingsAdmin(admin.ModelAdmin):
     list_display = ('auto_reply_enabled', 'updated_at')
+
+
+@admin.register(ReplyExample)
+class ReplyExampleAdmin(admin.ModelAdmin):
+    list_display = ('incoming_preview', 'reply_preview', 'is_active', 'updated_at')
+    search_fields = ('incoming_message', 'bilal_reply', 'notes')
+    list_filter = ('is_active',)
+
+    @admin.display(description='Incoming message')
+    def incoming_preview(self, obj):
+        return obj.incoming_message[:80]
+
+    @admin.display(description='Bilal-style reply')
+    def reply_preview(self, obj):
+        return obj.bilal_reply[:80]
 
 
 @admin.register(Contact)

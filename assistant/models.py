@@ -20,6 +20,21 @@ class AssistantSettings(models.Model):
         return cls.objects.get_or_create(pk=1)[0]
 
 
+class ReplyExample(models.Model):
+    incoming_message = models.TextField(help_text='Example message received from a contact.')
+    bilal_reply = models.TextField(help_text="Bilal-style reply to use as tone, wording, and Roman Urdu guidance.")
+    is_active = models.BooleanField(default=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f'{self.incoming_message[:40]} -> {self.bilal_reply[:40]}'
+
+
 class Contact(models.Model):
     phone_number = models.CharField(max_length=32, unique=True)
     display_name = models.CharField(max_length=255, blank=True)

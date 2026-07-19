@@ -2,6 +2,7 @@ from django.utils import timezone
 
 from assistant.models import AssistantSettings, Contact, Conversation, Message
 from assistant.services.ai import get_ai_service
+from assistant.services.instructions import build_ai_instructions
 from assistant.services.safety import escalation_reason
 
 TEST_CHAT_PHONE_NUMBER = 'local-test-chat'
@@ -22,14 +23,6 @@ def get_test_conversation():
     contact.save(update_fields=update_fields)
     conversation, _ = Conversation.objects.get_or_create(contact=contact)
     return conversation
-
-
-def build_ai_instructions(settings):
-    return (
-        f"{settings.unavailable_message}\n\n"
-        f"Owner instructions:\n{settings.custom_instructions}\n\n"
-        'Never answer sensitive, urgent, financial, OTP, password, or highly personal requests; escalate instead.'
-    )
 
 
 def process_test_chat_message(text):
@@ -56,7 +49,7 @@ def process_test_chat_message(text):
 
     history = list(conversation.messages.exclude(pk=inbound.pk))
     reply = get_ai_service().generate_reply(
-        instructions=build_ai_instructions(settings),
+        instructions=build_ai_instructions(settings, latest_message=text),
         contact=conversation.contact,
         history=history,
         latest_message=text,
