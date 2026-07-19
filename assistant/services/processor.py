@@ -3,6 +3,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 from assistant.models import AssistantSettings, Contact, Conversation, Message
 from assistant.services.ai import get_ai_service
+from assistant.services.instructions import build_ai_instructions
 from assistant.services.safety import escalation_reason
 from assistant.services.whatsapp import WhatsAppClient
 
@@ -40,7 +41,7 @@ def process_inbound_text(*, phone_number, text, whatsapp_message_id='', raw_payl
         conversation.mark_escalated(reason)
         return {'status': 'escalated', 'reason': reason}
 
-    instructions = f"{settings.unavailable_message}\n\nOwner instructions:\n{settings.custom_instructions}\n\nNever answer sensitive, urgent, financial, OTP, password, or highly personal requests; escalate instead."
+    instructions = build_ai_instructions(settings, latest_message=text)
     history = conversation.messages.exclude(pk=inbound.pk)
     reply = get_ai_service().generate_reply(instructions=instructions, contact=contact, history=list(history), latest_message=text)
     WhatsAppClient().send_text(phone_number, reply)

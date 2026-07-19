@@ -72,6 +72,10 @@ GEMINI_MODEL=gemini-2.5-flash-lite
 
 Open `http://127.0.0.1:8000/test-chat/` while the development server is running to test the Gemini assistant from a browser. The page stores its contact, conversation, and messages in the existing database models, applies the same Assistant Settings instructions and safety escalation rules, and does not call the WhatsApp API.
 
+## Reply examples
+
+Add Bilal-style reply examples in Django Admin under **Reply examples**. Each active example stores an incoming message and the reply Bilal would send. When the assistant builds Gemini instructions, it includes the most relevant active examples for the latest message so Gemini can follow Bilal's tone, wording, and Roman Urdu style while still using the same safety rules and conversation history.
+
 ## WhatsApp webhook
 
 Configure the Meta WhatsApp Cloud API webhook URL as:
