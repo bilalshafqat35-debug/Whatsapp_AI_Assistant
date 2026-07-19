@@ -1,5 +1,11 @@
+import logging
 from abc import ABC, abstractmethod
+
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
+
+FALLBACK_REPLY = 'Thanks for your message. I am currently unavailable and will respond personally as soon as possible.'
 
 
 class AIService(ABC):
@@ -8,20 +14,57 @@ class AIService(ABC):
         raise NotImplementedError
 
 
-class OpenAIService(AIService):
+class GeminiAIService(AIService):
+    """AI service implementation backed by the official Google Gen AI SDK."""
+
     def generate_reply(self, *, instructions, contact, history, latest_message):
-        if not settings.OPENAI_API_KEY:
-            return 'Thanks for your message. I am currently unavailable and will respond personally as soon as possible.'
-        from openai import OpenAI
-        client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        messages = [{'role': 'system', 'content': instructions}]
+        if not settings.GEMINI_API_KEY:
+            logger.error('GEMINI_API_KEY is missing; using fallback reply.')
+            return FALLBACK_REPLY
+
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        contents = self._build_contents(history=history, latest_message=latest_message, types=types)
+
+        try:
+            response = client.models.generate_content(
+                model=settings.GEMINI_MODEL,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=instructions,
+                    temperature=0.4,
+                ),
+            )
+        except Exception as exc:
+            if self._is_quota_error(exc):
+                logger.error('Gemini API quota exhausted or rate limited: %s', exc)
+            else:
+                logger.exception('Gemini API request failed: %s', exc)
+            return FALLBACK_REPLY
+
+        reply = (response.text or '').strip()
+        if not reply:
+            logger.error('Gemini API returned an empty response; using fallback reply.')
+            return FALLBACK_REPLY
+        return reply
+
+    def _build_contents(self, *, history, latest_message, types):
+        contents = []
         for item in history[-20:]:
-            role = 'assistant' if item.sender_type == 'ai' else 'user'
-            messages.append({'role': role, 'content': item.text})
-        messages.append({'role': 'user', 'content': latest_message})
-        response = client.chat.completions.create(model=settings.OPENAI_MODEL, messages=messages, temperature=0.4)
-        return response.choices[0].message.content.strip()
+            role = 'model' if item.sender_type == 'ai' else 'user'
+            if item.text:
+                contents.append(types.Content(role=role, parts=[types.Part(text=item.text)]))
+        contents.append(types.Content(role='user', parts=[types.Part(text=latest_message)]))
+        return contents
+
+    def _is_quota_error(self, exc):
+        status_code = getattr(exc, 'status_code', None) or getattr(exc, 'code', None)
+        status = str(getattr(exc, 'status', '')).upper()
+        message = str(exc).lower()
+        return status_code == 429 or 'quota' in message or 'rate' in message or status == 'RESOURCE_EXHAUSTED'
 
 
 def get_ai_service():
-    return OpenAIService()
+    return GeminiAIService()

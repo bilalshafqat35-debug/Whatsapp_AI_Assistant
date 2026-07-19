@@ -9,7 +9,7 @@ A personal WhatsApp AI auto-reply assistant built with Python, Django, Django RE
 - Custom owner instructions for the AI assistant.
 - Human takeover mode per contact; when enabled, the bot stores messages but stops replying.
 - WhatsApp Cloud API webhook verification and inbound text processing.
-- AI service abstraction with an OpenAI implementation and a safe fallback when no API key is configured.
+- AI service abstraction with a Google Gemini implementation and a safe fallback when no API key, quota, or API response is available.
 - Escalation instead of auto-reply for urgent, sensitive, financial, OTP/password, or highly personal messages.
 - Duplicate WhatsApp message protection through a unique message-id constraint.
 - Environment-variable based configuration; no real secrets are committed.
@@ -27,7 +27,7 @@ config/                 Django project settings and URLs
 ## Local setup
 
 1. Create and activate a virtual environment.
-2. Install dependencies:
+2. Install dependencies, including the official Google Gen AI Python SDK:
 
    ```bash
    pip install -r requirements.txt
@@ -53,6 +53,18 @@ config/                 Django project settings and URLs
    ```
 
 6. Open the admin dashboard at `http://127.0.0.1:8000/admin/`.
+
+## Gemini configuration
+
+This project uses the official Google Gen AI Python SDK (`google-genai`) through the existing `AIService` abstraction. Configure Gemini with environment variables:
+
+```env
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=gemini-2.5-flash-lite
+```
+
+`GEMINI_MODEL` defaults to `gemini-2.5-flash-lite` when it is not set. If `GEMINI_API_KEY` is missing, Gemini quota is exhausted, the API is rate-limited, or the API request fails, the assistant logs the error and sends a safe fallback reply instead of crashing the webhook.
 
 ## WhatsApp webhook
 
