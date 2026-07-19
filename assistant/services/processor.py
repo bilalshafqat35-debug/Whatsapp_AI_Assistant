@@ -4,6 +4,7 @@ from django.utils import timezone
 from assistant.models import AssistantSettings, Contact, Conversation, Message
 from assistant.services.ai import get_ai_service
 from assistant.services.instructions import build_ai_instructions
+from assistant.services.reply_examples import find_semantic_reply_example
 from assistant.services.safety import escalation_reason
 from assistant.services.whatsapp import WhatsAppClient
 
@@ -41,9 +42,19 @@ def process_inbound_text(*, phone_number, text, whatsapp_message_id='', raw_payl
         conversation.mark_escalated(reason)
         return {'status': 'escalated', 'reason': reason}
 
-    instructions = build_ai_instructions(settings, latest_message=text)
-    history = conversation.messages.exclude(pk=inbound.pk)
-    reply = get_ai_service().generate_reply(instructions=instructions, contact=contact, history=list(history), latest_message=text)
+    matched_example = find_semantic_reply_example(text)
+    if matched_example is not None:
+        reply = matched_example.bilal_reply
+    else:
+        instructions = build_ai_instructions(settings, latest_message=text)
+        history = conversation.messages.exclude(pk=inbound.pk)
+        reply = get_ai_service().generate_reply(
+            instructions=instructions,
+            contact=contact,
+            history=list(history),
+            latest_message=text,
+            fallback_reply=settings.unavailable_message,
+        )
     WhatsAppClient().send_text(phone_number, reply)
     Message.objects.create(conversation=conversation, direction=Message.Direction.OUTBOUND, sender_type=Message.SenderType.AI, text=reply)
     return {'status': 'replied'}

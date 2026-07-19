@@ -4,7 +4,6 @@ from django.test import TestCase
 from django.urls import reverse
 
 from assistant.models import Contact, Message
-from assistant.services.ai import FALLBACK_REPLY
 
 
 class TestChatViewTests(TestCase):
@@ -25,7 +24,7 @@ class TestChatViewTests(TestCase):
         self.assertEqual(messages.count(), 2)
         self.assertEqual(messages[0].text, 'Hello assistant')
         self.assertEqual(messages[0].sender_type, Message.SenderType.CONTACT)
-        self.assertEqual(messages[1].text, FALLBACK_REPLY)
+        self.assertEqual(messages[1].text, "I am currently unavailable, so my AI assistant is replying for me.")
         self.assertEqual(messages[1].sender_type, Message.SenderType.AI)
         self.assertEqual(messages[1].raw_payload, {'source': 'local_test_chat'})
 

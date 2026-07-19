@@ -10,17 +10,17 @@ FALLBACK_REPLY = 'Thanks for your message. I am currently unavailable and will r
 
 class AIService(ABC):
     @abstractmethod
-    def generate_reply(self, *, instructions, contact, history, latest_message):
+    def generate_reply(self, *, instructions, contact, history, latest_message, fallback_reply=FALLBACK_REPLY):
         raise NotImplementedError
 
 
 class GeminiAIService(AIService):
     """AI service implementation backed by the official Google Gen AI SDK."""
 
-    def generate_reply(self, *, instructions, contact, history, latest_message):
+    def generate_reply(self, *, instructions, contact, history, latest_message, fallback_reply=FALLBACK_REPLY):
         if not settings.GEMINI_API_KEY:
             logger.error('GEMINI_API_KEY is missing; using fallback reply.')
-            return FALLBACK_REPLY
+            return fallback_reply
 
         from google import genai
         from google.genai import types
@@ -42,12 +42,12 @@ class GeminiAIService(AIService):
                 logger.error('Gemini API quota exhausted or rate limited: %s', exc)
             else:
                 logger.exception('Gemini API request failed: %s', exc)
-            return FALLBACK_REPLY
+            return fallback_reply
 
         reply = (response.text or '').strip()
         if not reply:
             logger.error('Gemini API returned an empty response; using fallback reply.')
-            return FALLBACK_REPLY
+            return fallback_reply
         return reply
 
     def _build_contents(self, *, history, latest_message, types):
