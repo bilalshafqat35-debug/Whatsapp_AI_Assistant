@@ -1,6 +1,7 @@
 import logging
 from django.conf import settings
 from django.http import HttpResponse
+from django.shortcuts import redirect, render
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAdminUser
@@ -8,6 +9,7 @@ from rest_framework.response import Response
 from assistant.models import AssistantSettings, Contact, Conversation, Message
 from assistant.serializers import AssistantSettingsSerializer, ContactSerializer, ConversationSerializer, MessageSerializer
 from assistant.services.processor import process_inbound_text
+from assistant.services.test_chat import get_test_conversation, process_test_chat_message
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +42,28 @@ def whatsapp_webhook(request):
         logger.exception('Failed to process WhatsApp webhook')
         return Response({'detail': 'Webhook accepted with processing error'}, status=status.HTTP_202_ACCEPTED)
     return Response({'status': 'ok'})
+
+
+def test_chat(request):
+    notice = ''
+    draft = ''
+
+    if request.method == 'POST':
+        draft = request.POST.get('message', '').strip()
+        if draft:
+            result = process_test_chat_message(draft)
+            if result['status'] == 'escalated':
+                notice = f"Message saved, but the assistant did not reply because it matched a safety rule: {result['reason']}."
+            elif result['status'] == 'stored_no_reply':
+                notice = 'Message saved, but auto-reply is currently disabled in Assistant Settings.'
+            else:
+                return redirect('test-chat')
+        else:
+            notice = 'Please type a message before sending.'
+
+    conversation = get_test_conversation()
+    messages = conversation.messages.all()
+    return render(request, 'assistant/test_chat.html', {'messages': messages, 'notice': notice, 'draft': draft})
 
 
 class AssistantSettingsViewSet(viewsets.ModelViewSet):
