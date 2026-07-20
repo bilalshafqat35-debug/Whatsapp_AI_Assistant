@@ -44,6 +44,14 @@ def whatsapp_webhook(request):
     return Response({'status': 'ok'})
 
 
+def privacy_policy(request):
+    return render(request, 'assistant/privacy_policy.html')
+
+
+def data_deletion(request):
+    return render(request, 'assistant/data_deletion.html')
+
+
 def test_chat(request):
     notice = ''
     draft = ''
